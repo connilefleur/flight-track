@@ -1,0 +1,18 @@
+{
+  "name": "Flight Track",
+  "short_name": "Flight Track",
+  "description": "Countdown to arrival and flight info",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a1a0a",
+  "theme_color": "#0a1a0a",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

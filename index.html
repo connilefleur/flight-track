@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0a1a0a" />
+  <meta name="description" content="Flight countdown — arrival countdown and flight info" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <title>Flight Track</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="root">
+    <div id="loading" class="screen">LOADING...</div>
+    <div id="error" class="screen hidden"></div>
+    <div id="app" class="screen hidden">
+      <header class="header">
+        <div id="flightNumber" class="flight-number">——</div>
+        <div id="route" class="route">——— → ———</div>
+      </header>
+      <section class="countdown-section">
+        <div id="countdownLabel" class="countdown-label">LANDING IN</div>
+        <div id="countdown" class="countdown">00:00:00</div>
+      </section>
+      <section id="inFlightSection" class="in-flight hidden">
+        <div id="elapsedLabel" class="elapsed-label">FLIGHT TIME</div>
+        <div id="elapsed" class="elapsed">00:00</div>
+        <div class="progress-wrap">
+          <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+        </div>
+      </section>
+      <section class="details">
+        <div class="detail-row">
+          <span class="label">DEP</span>
+          <span id="depTime" class="value">--:--</span>
+          <span id="depGate" class="meta"></span>
+          <span id="depTerminal" class="meta"></span>
+        </div>
+        <div class="detail-row">
+          <span class="label">ARR</span>
+          <span id="arrTime" class="value">--:--</span>
+          <span id="arrGate" class="meta"></span>
+          <span id="arrTerminal" class="meta"></span>
+        </div>
+        <div id="statusRow" class="detail-row">
+          <span class="label">STATUS</span>
+          <span id="status" class="value">——</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

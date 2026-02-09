@@ -1,0 +1,24 @@
+# Environment and secrets – never commit these
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+api/.env
+api/.env.local
+*.key
+secrets.txt
+secrets.json
+*.pem
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log
+
+# Dependencies (if you add a build step later)
+node_modules/
