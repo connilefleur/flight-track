@@ -67,28 +67,40 @@
     return '00:' + String(m).padStart(2, '0');
   }
 
-  function renderCountdown(arrivalMs) {
+  function renderCountdown(depMs, arrivalMs) {
     const now = Date.now();
-    const diff = arrivalMs - now;
+    const diffArr = arrivalMs - now;
     const label = $('countdownLabel');
     const el = $('countdown');
 
-    if (diff <= 0) {
+    if (!arrivalMs) {
+      label.textContent = 'LANDING IN';
+      el.textContent = '--';
+      return;
+    }
+
+    if (diffArr <= 0) {
       label.textContent = 'LANDED';
       el.textContent = '00:00:00';
       return;
     }
 
-    const sec = Math.floor(diff / 1000) % 60;
-    const min = Math.floor(diff / 60000) % 60;
-    const hours = Math.floor(diff / 3600000) % 24;
-    const days = Math.floor(diff / 86400000);
+    const oneDayMs = 24 * 60 * 60 * 1000;
 
-    if (days > 0) {
-      label.textContent = 'LANDING IN';
-      el.textContent = days + ' day' + (days !== 1 ? 's' : '');
-      return;
+    // \"XX days\" mode: until 24h before scheduled departure
+    if (depMs) {
+      const diffDep = depMs - now;
+      if (diffDep > oneDayMs) {
+        const days = Math.floor(diffDep / oneDayMs);
+        label.textContent = 'LANDING IN';
+        el.textContent = days + ' day' + (days !== 1 ? 's' : '');
+        return;
+      }
     }
+
+    const sec = Math.floor(diffArr / 1000) % 60;
+    const min = Math.floor(diffArr / 60000) % 60;
+    const hours = Math.floor(diffArr / 3600000) % 24;
 
     label.textContent = 'LANDING IN';
     el.textContent =
@@ -120,12 +132,12 @@
       landedAt = landedAt || arrMs;
       if (now - landedAt >= STOP_POLL_AFTER_LANDED_MS) {
         stopTimers();
-        renderCountdown(arrMs);
+        renderCountdown(depMs, arrMs);
         return;
       }
     }
 
-    renderCountdown(arrMs);
+    renderCountdown(depMs, arrMs);
 
     if (flight.status === 'active' && depMs && arrMs && now >= depMs) {
       show($('inFlightSection'));
