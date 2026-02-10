@@ -9,6 +9,19 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
+// Only allow requests from these front-end origins
+const ALLOWED_ORIGINS = [
+  'https://flight-track-blond.vercel.app',
+  'https://connilefleur.github.io',
+];
+
+function getAllowedOrigin(req) {
+  const origin = (req.headers && req.headers.origin) || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  // Fallback for same-origin serverless calls (no Origin header) – use primary frontend
+  return ALLOWED_ORIGINS[0];
+}
+
 function getFlightNumber() {
   const envFlight = process.env.FLIGHT_NUMBER && process.env.FLIGHT_NUMBER.trim();
   if (envFlight) return envFlight.trim();
@@ -76,53 +89,60 @@ function normalize(aviationData) {
   };
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*', // restrict to your origin in production, e.g. https://you.github.io
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
-
-function jsonResponse(obj, status = 200) {
-  return {
-    statusCode: status,
-    headers: CORS_HEADERS,
-    body: JSON.stringify(obj),
-  };
-}
-
 module.exports = async (req, res) => {
+  const allowOrigin = getAllowedOrigin(req);
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']);
-    res.setHeader('Access-Control-Allow-Methods', CORS_HEADERS['Access-Control-Allow-Methods']);
-    res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS['Access-Control-Allow-Headers']);
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.status(204).end();
     return;
   }
 
   if (req.method !== 'GET') {
-    res.status(405).setHeader('Content-Type', 'application/json').end(JSON.stringify({ error: 'Method not allowed' }));
+    res
+      .status(405)
+      .setHeader('Access-Control-Allow-Origin', allowOrigin)
+      .setHeader('Content-Type', 'application/json')
+      .end(JSON.stringify({ error: 'Method not allowed' }));
     return;
   }
 
-  const allowedToken = process.env.ALLOWED_TOKEN;
+  // Token check: allow if (1) same-origin request from our app, or (2) ?t= matches ALLOWED_TOKEN
+  const allowedToken = process.env.ALLOWED_TOKEN && process.env.ALLOWED_TOKEN.trim();
   if (allowedToken && allowedToken.length > 0) {
-    const t = (req.query && req.query.t) || '';
-    if (t !== allowedToken) {
-      res.status(401).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify({ error: 'Unauthorized' }));
+    const t = ((req.query && req.query.t) || '').trim();
+    const origin = (req.headers && (req.headers.origin || req.headers.referer)) || '';
+    const isSameOrigin = ALLOWED_ORIGINS.some((o) => origin.startsWith(o));
+    const tokenOk = t === allowedToken;
+    if (!tokenOk && !isSameOrigin) {
+      res
+        .status(401)
+        .setHeader('Access-Control-Allow-Origin', allowOrigin)
+        .setHeader('Content-Type', 'application/json')
+        .end(JSON.stringify({ error: 'Unauthorized' }));
       return;
     }
   }
 
   const apiKey = process.env.AVIATIONSTACK_API_KEY;
   if (!apiKey || !apiKey.trim()) {
-    res.status(500).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify({ error: 'Server misconfiguration: no API key' }));
+    res
+      .status(500)
+      .setHeader('Access-Control-Allow-Origin', allowOrigin)
+      .setHeader('Content-Type', 'application/json')
+      .end(JSON.stringify({ error: 'Server misconfiguration: no API key' }));
     return;
   }
 
   const flightIata = getFlightNumber();
   if (!flightIata) {
-    res.status(400).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify({ error: 'No flight number configured. Set FLIGHT_NUMBER in env or add api/flight-number.txt' }));
+    res
+      .status(400)
+      .setHeader('Access-Control-Allow-Origin', allowOrigin)
+      .setHeader('Content-Type', 'application/json')
+      .end(JSON.stringify({ error: 'No flight number configured. Set FLIGHT_NUMBER in env or add api/flight-number.txt' }));
     return;
   }
 
@@ -130,11 +150,23 @@ module.exports = async (req, res) => {
     const data = await fetchAviationStack(apiKey, flightIata);
     const out = normalize(data);
     if (!out) {
-      res.status(404).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify({ error: 'Flight not found' }));
+      res
+        .status(404)
+        .setHeader('Access-Control-Allow-Origin', allowOrigin)
+        .setHeader('Content-Type', 'application/json')
+        .end(JSON.stringify({ error: 'Flight not found' }));
       return;
     }
-    res.status(200).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify(out));
+    res
+      .status(200)
+      .setHeader('Access-Control-Allow-Origin', allowOrigin)
+      .setHeader('Content-Type', 'application/json')
+      .end(JSON.stringify(out));
   } catch (err) {
-    res.status(500).setHeader('Content-Type', 'application/json').setHeader('Access-Control-Allow-Origin', CORS_HEADERS['Access-Control-Allow-Origin']).end(JSON.stringify({ error: err.message || 'Failed to fetch flight data' }));
+    res
+      .status(500)
+      .setHeader('Access-Control-Allow-Origin', allowOrigin)
+      .setHeader('Content-Type', 'application/json')
+      .end(JSON.stringify({ error: err.message || 'Failed to fetch flight data' }));
   }
 };
