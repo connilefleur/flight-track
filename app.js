@@ -5,7 +5,7 @@
  * Polling is adaptive to stay within ~50 requests per flight (100/month allows 2 flights).
  */
 (function () {
-  const API_BASE = ''; // e.g. 'https://flight-track-api.vercel.app' — replace with your API origin
+  const API_BASE = 'https://flight-track-blond.vercel.app'; // your Vercel deployment
   const STOP_POLL_AFTER_LANDED_MS = 60 * 60 * 1000; // stop updates 1 hour after landing
 
   const H = 60 * 60 * 1000;
