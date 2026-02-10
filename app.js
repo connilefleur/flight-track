@@ -128,19 +128,36 @@
     const arrSched = parseDate(flight.arr && flight.arr.scheduled);
     const depMs = depActual ? depActual.getTime() : (depSched ? depSched.getTime() : 0);
     const arrMs = arrActual ? arrActual.getTime() : (arrSched ? arrSched.getTime() : 0);
-    const depSchedMs = depSched ? depSched.getTime() : depMs;
+    let depSchedMs = depSched ? depSched.getTime() : depMs;
+    let arrMsForCountdown = arrMs;
+    const reqDate = flight.requestedDepartureDate;
+    const depSchedStr = flight.dep && flight.dep.scheduled;
+    const arrSchedStr = flight.arr && flight.arr.scheduled;
+    if (reqDate && typeof reqDate === 'string') {
+      const dateOnly = reqDate.length >= 10 ? reqDate.substring(0, 10) : reqDate;
+      if (depSchedStr && typeof depSchedStr === 'string' && depSchedStr.indexOf('T') >= 0) {
+        const combinedDep = dateOnly + depSchedStr.substring(depSchedStr.indexOf('T'));
+        const combinedDepDate = parseDate(combinedDep);
+        if (combinedDepDate) depSchedMs = combinedDepDate.getTime();
+      }
+      if (arrSchedStr && typeof arrSchedStr === 'string' && arrSchedStr.indexOf('T') >= 0) {
+        const combinedArr = dateOnly + arrSchedStr.substring(arrSchedStr.indexOf('T'));
+        const combinedArrDate = parseDate(combinedArr);
+        if (combinedArrDate) arrMsForCountdown = combinedArrDate.getTime();
+      }
+    }
     const now = Date.now();
 
     if (flight.status === 'landed') {
       landedAt = landedAt || arrMs;
       if (now - landedAt >= STOP_POLL_AFTER_LANDED_MS) {
         stopTimers();
-        renderCountdown(depSchedMs, arrMs);
+        renderCountdown(depSchedMs, arrMsForCountdown);
         return;
       }
     }
 
-    renderCountdown(depSchedMs, arrMs);
+    renderCountdown(depSchedMs, arrMsForCountdown);
 
     if (flight.status === 'active' && depMs && arrMs && now >= depMs) {
       show($('inFlightSection'));

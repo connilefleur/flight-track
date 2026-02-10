@@ -39,10 +39,9 @@ function getFlightConfig() {
   return { flightIata: flightIata || null, flightDate: flightDate || null };
 }
 
-function fetchAviationStack(apiKey, flightIata, flightDate) {
+function fetchAviationStack(apiKey, flightIata) {
   return new Promise((resolve, reject) => {
-    let url = `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(apiKey)}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`;
-    if (flightDate) url += '&flight_date=' + encodeURIComponent(flightDate);
+    const url = `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(apiKey)}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`;
     https.get(url, (res) => {
       let body = '';
       res.on('data', (ch) => { body += ch; });
@@ -63,7 +62,7 @@ function fetchAviationStack(apiKey, flightIata, flightDate) {
 }
 
 /** Normalize to our front-end shape: actual times (fallback scheduled), gate, terminal, etc. */
-function normalize(aviationData) {
+function normalize(aviationData, requestedDepartureDate) {
   const raw = aviationData.data && aviationData.data[0];
   if (!raw) return null;
 
@@ -71,7 +70,7 @@ function normalize(aviationData) {
   const arr = raw.arrival || {};
   const use = (actual, estimated, scheduled) => actual || estimated || scheduled || null;
 
-  return {
+  const out = {
     flightNumber: raw.flight && (raw.flight.iata || raw.flight.number) ? (raw.flight.iata || raw.flight.number) : null,
     status: raw.flight_status || null,
     origin: dep.iata || null,
@@ -92,6 +91,8 @@ function normalize(aviationData) {
     },
     airline: raw.airline && raw.airline.name ? raw.airline.name : null,
   };
+  if (requestedDepartureDate) out.requestedDepartureDate = requestedDepartureDate;
+  return out;
 }
 
 module.exports = async (req, res) => {
@@ -152,8 +153,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const data = await fetchAviationStack(apiKey, flightIata, flightDate);
-    const out = normalize(data);
+    const data = await fetchAviationStack(apiKey, flightIata);
+    const out = normalize(data, flightDate);
     if (!out) {
       res
         .status(404)
