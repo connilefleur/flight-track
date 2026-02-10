@@ -22,22 +22,27 @@ function getAllowedOrigin(req) {
   return ALLOWED_ORIGINS[0];
 }
 
-function getFlightNumber() {
-  const envFlight = process.env.FLIGHT_NUMBER && process.env.FLIGHT_NUMBER.trim();
-  if (envFlight) return envFlight.trim();
+function getFlightConfig() {
+  let flightIata = (process.env.FLIGHT_NUMBER && process.env.FLIGHT_NUMBER.trim()) || null;
+  let flightDate = (process.env.FLIGHT_DATE && process.env.FLIGHT_DATE.trim()) || null;
   try {
     const filePath = path.join(process.cwd(), 'api', 'flight-number.txt');
     const raw = fs.readFileSync(filePath, 'utf8');
-    const line = raw.split('\n')[0] && raw.split('\n')[0].trim();
-    return line || null;
-  } catch (_) {
-    return null;
+    const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (lines[0]) flightIata = flightIata || lines[0];
+    if (lines[1]) flightDate = flightDate || lines[1];
+  } catch (_) {}
+  if (flightDate && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(flightDate)) {
+    const [d, m, y] = flightDate.split('.');
+    flightDate = y + '-' + m.padStart(2, '0') + '-' + d.padStart(2, '0');
   }
+  return { flightIata: flightIata || null, flightDate: flightDate || null };
 }
 
-function fetchAviationStack(apiKey, flightIata) {
+function fetchAviationStack(apiKey, flightIata, flightDate) {
   return new Promise((resolve, reject) => {
-    const url = `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(apiKey)}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`;
+    let url = `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(apiKey)}&flight_iata=${encodeURIComponent(flightIata)}&limit=1`;
+    if (flightDate) url += '&flight_date=' + encodeURIComponent(flightDate);
     https.get(url, (res) => {
       let body = '';
       res.on('data', (ch) => { body += ch; });
@@ -136,7 +141,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const flightIata = getFlightNumber();
+  const { flightIata, flightDate } = getFlightConfig();
   if (!flightIata) {
     res
       .status(400)
@@ -147,7 +152,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const data = await fetchAviationStack(apiKey, flightIata);
+    const data = await fetchAviationStack(apiKey, flightIata, flightDate);
     const out = normalize(data);
     if (!out) {
       res
