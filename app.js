@@ -122,22 +122,25 @@
 
   function tick() {
     if (!flight) return;
-    const dep = parseDate(flight.dep && flight.dep.actual);
-    const arr = parseDate(flight.arr && flight.arr.actual);
-    const depMs = dep ? dep.getTime() : 0;
-    const arrMs = arr ? arr.getTime() : 0;
+    const depActual = parseDate(flight.dep && flight.dep.actual);
+    const arrActual = parseDate(flight.arr && flight.arr.actual);
+    const depSched = parseDate(flight.dep && flight.dep.scheduled);
+    const arrSched = parseDate(flight.arr && flight.arr.scheduled);
+    const depMs = depActual ? depActual.getTime() : (depSched ? depSched.getTime() : 0);
+    const arrMs = arrActual ? arrActual.getTime() : (arrSched ? arrSched.getTime() : 0);
+    const depSchedMs = depSched ? depSched.getTime() : depMs;
     const now = Date.now();
 
     if (flight.status === 'landed') {
       landedAt = landedAt || arrMs;
       if (now - landedAt >= STOP_POLL_AFTER_LANDED_MS) {
         stopTimers();
-        renderCountdown(depMs, arrMs);
+        renderCountdown(depSchedMs, arrMs);
         return;
       }
     }
 
-    renderCountdown(depMs, arrMs);
+    renderCountdown(depSchedMs, arrMs);
 
     if (flight.status === 'active' && depMs && arrMs && now >= depMs) {
       show($('inFlightSection'));
